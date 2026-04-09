@@ -209,7 +209,16 @@ jobs:
         scripts/config --disable CONFIG_TIMA_LOG                    2>/dev/null || true
         scripts/config --disable CONFIG_TIMA_ENGINE_LOG             2>/dev/null || true
         scripts/config --disable CONFIG_TIMA_LKMSG                  2>/dev/null || true
-        scripts/config --disable CONFIG_KNOX_KAP                    2>/dev/null || true
+        scripts/config --disable CONFIG_KNOX_KAP
+        scripts/config --disable CONFIG_PROCA               2>/dev/null || true
+        scripts/config --disable CONFIG_DEFEX               2>/dev/null || true
+        scripts/config --disable CONFIG_FIVE                2>/dev/null || true
+        scripts/config --disable CONFIG_UH                  2>/dev/null || true
+        scripts/config --disable CONFIG_UH_RKP              2>/dev/null || true
+        scripts/config --disable CONFIG_KDP_CRED            2>/dev/null || true
+        scripts/config --disable CONFIG_RKP_NS_PROT         2>/dev/null || true
+        scripts/config --disable CONFIG_RKP_NUM_FIMC        2>/dev/null || true
+        scripts/config --disable CONFIG_INTEGRITY           2>/dev/null || true                    2>/dev/null || true
         scripts/config --disable CONFIG_SECURE_OS_BOOT              2>/dev/null || true
         scripts/config --disable CONFIG_SSRM                        2>/dev/null || true
         scripts/config --disable CONFIG_SEC_FACTORY                 2>/dev/null || true
