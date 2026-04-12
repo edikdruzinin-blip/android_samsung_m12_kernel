@@ -32,26 +32,48 @@ jobs:
         echo "ccache configured, cache dir: $HOME/.ccache"
         ccache --show-stats
 
-    - name: Download Android Clang 9.0.3 toolchain
+    - name: Download Android Clang r353983c (9.0.3, same as physwizz)
       run: |
-        mkdir -p $HOME/toolchains
+        mkdir -p $HOME/toolchains/clang-r353983c
         cd $HOME/toolchains
-        wget -q https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/android10-release/clang-r353983c.tar.gz -O clang-9.tar.gz || \
-        wget -q https://github.com/llvm/llvm-project/releases/download/llvmorg-11.1.0/clang+llvm-11.1.0-aarch64-linux-gnu.tar.xz -O clang-9.tar.gz || true
-        wget -q "https://github.com/ZyCromerZ/Clang/releases/download/9.0.3-20210211-release/Clang-9.0.3-20210211.tar.gz" -O clang-android.tar.gz 2>/dev/null || true
-        if [ -f clang-android.tar.gz ] && [ -s clang-android.tar.gz ]; then
-            mkdir -p clang-9
-            tar -xf clang-android.tar.gz -C clang-9 --strip-components=1 2>/dev/null || \
-            tar -xf clang-android.tar.gz -C clang-9 2>/dev/null || true
+
+        # Primary: GitHub mirror of exact Android prebuilt clang-r353983c
+        echo "Trying clang-r353983c from GitHub mirror..."
+        wget -q --timeout=120 \
+          "https://github.com/kdrag0n/android-clang/releases/download/r353983c/clang-r353983c-linux-x86.tar.gz" \
+          -O clang-r353983c.tar.gz 2>/dev/null || true
+
+        # Fallback 1: neutron-clang r353983c
+        if [ ! -s clang-r353983c.tar.gz ]; then
+          echo "Trying neutron-clang..."
+          wget -q --timeout=120 \
+            "https://github.com/Neutron-Toolchains/clang-build-catalogue/releases/download/09012023/neutron-clang-09012023.tar.zst" \
+            -O clang-r353983c.tar.gz 2>/dev/null || true
         fi
-        if [ -f clang-9/bin/clang ]; then
-            echo "CLANG_PATH=$HOME/toolchains/clang-9/bin" >> $GITHUB_ENV
-            echo "Android Clang found:"
-            clang-9/bin/clang --version
+
+        # Fallback 2: ZyCromerZ Clang 9.0.3
+        if [ ! -s clang-r353983c.tar.gz ]; then
+          echo "Trying ZyCromerZ Clang 9.0.3..."
+          wget -q --timeout=120 \
+            "https://github.com/ZyCromerZ/Clang/releases/download/9.0.3-20210211-release/Clang-9.0.3-20210211.tar.gz" \
+            -O clang-r353983c.tar.gz 2>/dev/null || true
+        fi
+
+        # Extract
+        if [ -s clang-r353983c.tar.gz ]; then
+          tar -xf clang-r353983c.tar.gz -C clang-r353983c --strip-components=1 2>/dev/null || \
+          tar -xf clang-r353983c.tar.gz -C clang-r353983c 2>/dev/null || true
+        fi
+
+        # Verify
+        if [ -f clang-r353983c/bin/clang ]; then
+          echo "CLANG_PATH=$HOME/toolchains/clang-r353983c/bin" >> $GITHUB_ENV
+          echo "=== Android Clang r353983c ready ==="
+          clang-r353983c/bin/clang --version
         else
-            echo "CLANG_PATH=/usr/bin" >> $GITHUB_ENV
-            echo "WARNING: Using system clang-14 as fallback"
-            clang --version
+          echo "CLANG_PATH=/usr/bin" >> $GITHUB_ENV
+          echo "WARNING: Falling back to system clang-14"
+          clang --version
         fi
 
         # Wrappers for as/ld
@@ -207,6 +229,7 @@ jobs:
         scripts/config --disable CONFIG_SEC_DEBUG_FIRST2M_LOG 2>/dev/null || true
         # Disable Knox/RKP/TIMA
                 # Disable Samsung production security checks (like physwizz)
+        scripts/config --disable CONFIG_RANDOMIZE_BASE       2>/dev/null || true
         scripts/config --disable CONFIG_SAMSUNG_PRODUCT_SHIP    2>/dev/null || true
         scripts/config --disable CONFIG_SEC_RESTRICT_ROOTING    2>/dev/null || true
         scripts/config --disable CONFIG_SEC_RESTRICT_SETUID     2>/dev/null || true
@@ -235,6 +258,7 @@ jobs:
         scripts/config --disable CONFIG_SECURE_OS_BOOT              2>/dev/null || true
         scripts/config --disable CONFIG_SSRM                        2>/dev/null || true
         scripts/config --disable CONFIG_SEC_FACTORY                 2>/dev/null || true
+        scripts/config --disable CONFIG_RANDOMIZE_BASE       2>/dev/null || true
         scripts/config --disable CONFIG_SAMSUNG_PRODUCT_SHIP        2>/dev/null || true
         scripts/config --disable CONFIG_SEC_RESTRICT_SETUP          2>/dev/null || true
         scripts/config --disable CONFIG_SEC_RESTRICT_ROOTING        2>/dev/null || true
@@ -313,7 +337,7 @@ jobs:
         scripts/config --enable  CONFIG_PSTORE           2>/dev/null || true
         scripts/config --enable  CONFIG_PSTORE_RAM       2>/dev/null || true
         scripts/config --enable  CONFIG_PSTORE_CONSOLE   2>/dev/null || true
-        scripts/config --set-str CONFIG_CMDLINE "androidboot.warranty_bit=0 androidboot.bootlock=0 androidboot.veritymode=disabled androidboot.verifiedbootstate=orange androidboot.selinux=permissive enforcing=0 androidboot.secureboot=0 androidboot.force_secureboot=0 dm_verity.dev_wait=0" 2>/dev/null || true
+        scripts/config --set-str CONFIG_CMDLINE "androidboot.warranty_bit=0 androidboot.bootlock=0 androidboot.veritymode=disabled androidboot.verifiedbootstate=orange androidboot.selinux=permissive enforcing=0 androidboot.secureboot=0 androidboot.force_secureboot=0 dm_verity.dev_wait=0 nokaslr" 2>/dev/null || true
         scripts/config --enable  CONFIG_CMDLINE_EXTEND   2>/dev/null || true
         make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=${{ env.CLANG_PATH }}/clang CLANG_TRIPLE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=0 AS=aarch64-linux-gnu-as LD=aarch64-linux-gnu-ld olddefconfig
         # Patch DTS: ensure veritymode=disabled is in device tree bootargs
