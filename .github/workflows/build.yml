@@ -37,23 +37,31 @@ jobs:
         mkdir -p $HOME/toolchains/clang-r353983c
         cd $HOME/toolchains
 
-        # Primary: GitHub mirror of exact Android prebuilt clang-r353983c
-        echo "Trying clang-r353983c from GitHub mirror..."
+        # Source 1: sohamxda7 mirror (proven working)
+        echo "Trying sohamxda7 mirror..."
         wget -q --timeout=120 \
-          "https://github.com/kdrag0n/android-clang/releases/download/r353983c/clang-r353983c-linux-x86.tar.gz" \
+          "https://github.com/sohamxda7/llvm-stable/releases/download/r353983c/clang-r353983c.tar.gz" \
           -O clang-r353983c.tar.gz 2>/dev/null || true
 
-        # Fallback 1: neutron-clang r353983c
+        # Source 2: TheParasiteProject mirror
         if [ ! -s clang-r353983c.tar.gz ]; then
-          echo "Trying neutron-clang..."
+          echo "Trying TheParasiteProject mirror..."
           wget -q --timeout=120 \
-            "https://github.com/Neutron-Toolchains/clang-build-catalogue/releases/download/09012023/neutron-clang-09012023.tar.zst" \
+            "https://github.com/TheParasiteProject-Misc/prebuilts_clang_host_linux-x86_clang-r353983c/archive/refs/heads/main.tar.gz" \
             -O clang-r353983c.tar.gz 2>/dev/null || true
         fi
 
-        # Fallback 2: ZyCromerZ Clang 9.0.3
+        # Source 3: Google googlesource (exact prebuilt)
         if [ ! -s clang-r353983c.tar.gz ]; then
-          echo "Trying ZyCromerZ Clang 9.0.3..."
+          echo "Trying Google prebuilt..."
+          wget -q --timeout=180 \
+            "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/android10-release/clang-r353983c.tar.gz" \
+            -O clang-r353983c.tar.gz 2>/dev/null || true
+        fi
+
+        # Source 4: ZyCromerZ
+        if [ ! -s clang-r353983c.tar.gz ]; then
+          echo "Trying ZyCromerZ..."
           wget -q --timeout=120 \
             "https://github.com/ZyCromerZ/Clang/releases/download/9.0.3-20210211-release/Clang-9.0.3-20210211.tar.gz" \
             -O clang-r353983c.tar.gz 2>/dev/null || true
