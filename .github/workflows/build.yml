@@ -34,60 +34,31 @@ jobs:
 
     - name: Download Android Clang r353983c (9.0.3, same as physwizz)
       run: |
-        cd $HOME
-        # git clone is always available on GitHub Actions runners
-        echo "Cloning Android prebuilt clang r353983c via git..."
-        git clone --depth=1 --filter=blob:none --sparse \
-          https://github.com/LineageOS/android_prebuilts_clang_host_linux-x86_clang-r353983c.git \
-          toolchains/clang-r353983c 2>&1 | tail -3 || true
+        # Full git clone with actual files (sparse failed)
+        echo "Cloning LineageOS prebuilt clang r353983c (full)..."
+        git clone --depth=1           https://github.com/LineageOS/android_prebuilts_clang_host_linux-x86_clang-r353983c.git           $HOME/toolchains/clang-r353983c 2>&1 | tail -5 || true
 
-        if [ -d toolchains/clang-r353983c/.git ]; then
-          cd toolchains/clang-r353983c
-          git sparse-checkout set bin lib 2>/dev/null || true
-          git checkout 2>&1 | tail -2 || true
-          cd $HOME
-        fi
-
-        # Verify
-        if [ -f toolchains/clang-r353983c/bin/clang ]; then
+        if [ -f $HOME/toolchains/clang-r353983c/bin/clang ]; then
           echo "CLANG_PATH=$HOME/toolchains/clang-r353983c/bin" >> $GITHUB_ENV
-          echo "=== Android Clang r353983c ready ==="
-          toolchains/clang-r353983c/bin/clang --version
+          echo "=== Android Clang r353983c ready (LineageOS) ==="
+          $HOME/toolchains/clang-r353983c/bin/clang --version
         else
-          echo "Git clone failed, trying wget fallback..."
-          mkdir -p $HOME/toolchains/clang-r353983c
-          wget -q --timeout=120 \
-            "https://github.com/sohamxda7/llvm-stable/releases/download/r353983c/clang-r353983c.tar.gz" \
-            -O /tmp/clang-r353983c.tar.gz 2>/dev/null || true
-          if [ -s /tmp/clang-r353983c.tar.gz ]; then
-            tar -xf /tmp/clang-r353983c.tar.gz -C $HOME/toolchains/clang-r353983c --strip-components=1 2>/dev/null || \
-            tar -xf /tmp/clang-r353983c.tar.gz -C $HOME/toolchains/clang-r353983c 2>/dev/null || true
-          fi
-          if [ -f $HOME/toolchains/clang-r353983c/bin/clang ]; then
-            echo "CLANG_PATH=$HOME/toolchains/clang-r353983c/bin" >> $GITHUB_ENV
-            echo "=== Android Clang r353983c ready (wget) ==="
-            $HOME/toolchains/clang-r353983c/bin/clang --version
+          # Fallback: clang-9 from apt (LLVM 9.0 - very close to r353983c)
+          echo "Git clone failed, installing clang-9 from apt..."
+          sudo apt-get install -y -q clang-9 llvm-9 lld-9 2>/dev/null || true
+          if command -v clang-9 &>/dev/null; then
+            echo "CLANG_PATH=/usr/bin" >> $GITHUB_ENV
+            # Create symlinks so clang-9 is used as clang
+            sudo ln -sf /usr/bin/clang-9 /usr/local/bin/clang || true
+            sudo ln -sf /usr/bin/lld-9 /usr/local/bin/lld || true
+            echo "=== Using clang-9 (LLVM 9.0) ==="
+            clang-9 --version
           else
             echo "CLANG_PATH=/usr/bin" >> $GITHUB_ENV
             echo "WARNING: Falling back to system clang-14"
             clang --version
           fi
         fi
-
-        # Wrappers for as/ld
-        sudo cp /usr/bin/as /usr/bin/as.x86_64
-        printf '#!/bin/bash\nfor arg in "$@"; do\n  case "$arg" in\n    -EL|-EB)\n      exec /usr/bin/aarch64-linux-gnu-as "$@"\n      ;;\n    --64)\n      exec /usr/bin/as.x86_64 "$@"\n      ;;\n  esac\ndone\nexec /usr/bin/as.x86_64 "$@"\n' | sudo tee /usr/bin/as > /dev/null
-        sudo chmod +x /usr/bin/as
-        sudo cp /usr/bin/ld /usr/bin/ld.x86_64
-        printf '#!/bin/bash\nfor arg in "$@"; do\n  if [ "$arg" = "aarch64linux" ] || [ "$arg" = "aarch64elf" ] || [ "$arg" = "aarch64_elf64_le_vec" ]; then\n    exec /usr/bin/aarch64-linux-gnu-ld "$@"\n  fi\ndone\nexec /usr/bin/ld.x86_64 "$@"\n' | sudo tee /usr/bin/ld > /dev/null
-        sudo chmod +x /usr/bin/ld
-        echo "=== Wrappers installed ==="
-        head -2 /usr/bin/as
-        head -2 /usr/bin/ld
-        echo "=== ARM64 tools ==="
-        /usr/bin/aarch64-linux-gnu-as --version | head -1
-        /usr/bin/aarch64-linux-gnu-ld --version | head -1
-
     - name: Clone kernel source
       run: |
         git clone --depth=1 --branch 'main' \
