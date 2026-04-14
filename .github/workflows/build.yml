@@ -37,18 +37,33 @@ jobs:
         mkdir -p $HOME/toolchains
         cd $HOME/toolchains
 
-        echo "Cloning droidian clang-29 (contains r353983c)..."
-        git clone --depth=1 https://github.com/droidian/android-platform-prebuilts-clang-host-linux-x86-29.git clang-r353983c 2>&1 | tail -5 || true
+        echo "Cloning droidian clang-29 repository (contains r353983c)..."
+        git clone --depth=1 https://github.com/droidian/android-platform-prebuilts-clang-host-linux-x86-29.git clang-r353983c
 
-        if [ -f $HOME/toolchains/clang-r353983c/bin/clang ]; then
-          echo "CLANG_PATH=$HOME/toolchains/clang-r353983c/bin" >> $GITHUB_ENV
-          echo "=== Android Clang r353983c ready (droidian) ==="
-          $HOME/toolchains/clang-r353983c/bin/clang --version
+        echo "=== Repository contents (top level) ==="
+        ls -la clang-r353983c/
+
+        echo "=== Looking for clang binary ==="
+        if [ -f clang-r353983c/bin/clang ]; then
+          echo "Found clang at clang-r353983c/bin/clang"
         else
-          echo "ERROR: Failed to clone clang-r353983c"
-          echo "CLANG_PATH=/usr/bin" >> $GITHUB_ENV
-          clang --version
+          echo "bin/clang not found, searching..."
+          find clang-r353983c -name clang -type f 2>/dev/null | head -5
         fi
+
+        if [ -f clang-r353983c/bin/clang ]; then
+          CLANG_BIN_DIR="$HOME/toolchains/clang-r353983c/bin"
+        else
+          CLANG_BIN_DIR=$(find $HOME/toolchains/clang-r353983c -name clang -type f -exec dirname {} \; 2>/dev/null | head -1)
+          if [ -z "$CLANG_BIN_DIR" ]; then
+            echo "ERROR: clang binary not found in repository"
+            exit 1
+          fi
+        fi
+
+        echo "CLANG_PATH=$CLANG_BIN_DIR" >> $GITHUB_ENV
+        echo "=== Android Clang r353983c ready ==="
+        $CLANG_BIN_DIR/clang --version
     - name: Clone kernel source
       run: |
         git clone --depth=1 --branch 'main' \
