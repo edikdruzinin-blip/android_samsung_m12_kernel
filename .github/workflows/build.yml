@@ -32,32 +32,22 @@ jobs:
         echo "ccache configured, cache dir: $HOME/.ccache"
         ccache --show-stats
 
-    - name: Download Android Clang r353983c (9.0.3, same as physwizz)
+    - name: Download Android Clang r353983c (9.0.3)
       run: |
-        # Full git clone with actual files (sparse failed)
-        echo "Cloning LineageOS prebuilt clang r353983c (full)..."
-        git clone --depth=1           https://github.com/LineageOS/android_prebuilts_clang_host_linux-x86_clang-r353983c.git           $HOME/toolchains/clang-r353983c 2>&1 | tail -5 || true
+        mkdir -p $HOME/toolchains
+        cd $HOME/toolchains
+
+        echo "Cloning droidian clang-29 (contains r353983c)..."
+        git clone --depth=1 https://github.com/droidian/android-platform-prebuilts-clang-host-linux-x86-29.git clang-r353983c 2>&1 | tail -5 || true
 
         if [ -f $HOME/toolchains/clang-r353983c/bin/clang ]; then
           echo "CLANG_PATH=$HOME/toolchains/clang-r353983c/bin" >> $GITHUB_ENV
-          echo "=== Android Clang r353983c ready (LineageOS) ==="
+          echo "=== Android Clang r353983c ready (droidian) ==="
           $HOME/toolchains/clang-r353983c/bin/clang --version
         else
-          # Fallback: clang-9 from apt (LLVM 9.0 - very close to r353983c)
-          echo "Git clone failed, installing clang-9 from apt..."
-          sudo apt-get install -y -q clang-9 llvm-9 lld-9 2>/dev/null || true
-          if command -v clang-9 &>/dev/null; then
-            echo "CLANG_PATH=/usr/bin" >> $GITHUB_ENV
-            # Create symlinks so clang-9 is used as clang
-            sudo ln -sf /usr/bin/clang-9 /usr/local/bin/clang || true
-            sudo ln -sf /usr/bin/lld-9 /usr/local/bin/lld || true
-            echo "=== Using clang-9 (LLVM 9.0) ==="
-            clang-9 --version
-          else
-            echo "CLANG_PATH=/usr/bin" >> $GITHUB_ENV
-            echo "WARNING: Falling back to system clang-14"
-            clang --version
-          fi
+          echo "ERROR: Failed to clone clang-r353983c"
+          echo "CLANG_PATH=/usr/bin" >> $GITHUB_ENV
+          clang --version
         fi
     - name: Clone kernel source
       run: |
