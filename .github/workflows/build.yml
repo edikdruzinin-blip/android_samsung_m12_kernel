@@ -311,7 +311,7 @@ jobs:
         scripts/config --enable  CONFIG_PSTORE           2>/dev/null || true
         scripts/config --enable  CONFIG_PSTORE_RAM       2>/dev/null || true
         scripts/config --enable  CONFIG_PSTORE_CONSOLE   2>/dev/null || true
-        scripts/config --set-str CONFIG_CMDLINE "androidboot.warranty_bit=0 androidboot.bootlock=0 androidboot.veritymode=disabled androidboot.verifiedbootstate=orange androidboot.selinux=permissive enforcing=0 androidboot.secureboot=0 androidboot.force_secureboot=0 dm_verity.dev_wait=0 nokaslr" 2>/dev/null || true
+        scripts/config --set-str CONFIG_CMDLINE "androidboot.warranty_bit=0 androidboot.bootlock=0 androidboot.veritymode=disabled androidboot.verifiedbootstate=orange androidboot.selinux=permissive enforcing=0 androidboot.secureboot=0 androidboot.force_secureboot=0 dm_verity.dev_wait=0 nokaslr earlycon=exynos4210,0x13800000 ignore_loglevel" 2>/dev/null || true
         scripts/config --enable  CONFIG_CMDLINE_EXTEND   2>/dev/null || true
         make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=${{ env.CLANG_PATH }}/clang CLANG_TRIPLE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=0 AS=aarch64-linux-gnu-as LD=aarch64-linux-gnu-ld olddefconfig
         # Patch DTS: ensure veritymode=disabled is in device tree bootargs
@@ -319,6 +319,9 @@ jobs:
             sed -i 's/veritymode=enforcing/veritymode=disabled/g' "$f"
             echo "Patched DTS: $f"
         done || true
+        echo "=== FINAL .config critical settings ==="
+        grep -E "^CONFIG_(ARM64_VA_BITS|DM_VERITY|DM_BOW|CMDLINE|CMDLINE_EXTEND|RANDOMIZE_BASE|SAMSUNG_PRODUCT_SHIP|SEC_RESTRICT|PSTORE|IKCONFIG)=" .config || true
+        echo "==="
         grep -E "^CONFIG_(ARM64_VA_BITS|DM_BOW|BLK_DEV_DM|SELINUX)=" .config
 
     - name: Build kernel
