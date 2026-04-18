@@ -318,13 +318,25 @@ jobs:
         scripts/config --enable  CONFIG_DYNAMIC_DEBUG         2>/dev/null || true
         scripts/config --enable  CONFIG_DEBUG_LL              2>/dev/null || true
         scripts/config --enable  CONFIG_EARLY_PRINTK             2>/dev/null || true
+        # Critical Exynos850 early boot drivers
+        scripts/config --enable  CONFIG_SERIAL_SAMSUNG             2>/dev/null || true
+        scripts/config --enable  CONFIG_SERIAL_SAMSUNG_CONSOLE     2>/dev/null || true
+        scripts/config --enable  CONFIG_EXYNOS_CHIPID              2>/dev/null || true
+        scripts/config --enable  CONFIG_EXYNOS_PMU                 2>/dev/null || true
+        scripts/config --enable  CONFIG_EXYNOS_PMU_ARM64           2>/dev/null || true
+        scripts/config --enable  CONFIG_CLKSRC_EXYNOS_MCT          2>/dev/null || true
+        scripts/config --enable  CONFIG_ARM_ARCH_TIMER             2>/dev/null || true
+        scripts/config --enable  CONFIG_ARM_GIC                    2>/dev/null || true
+        scripts/config --enable  CONFIG_ARM_GIC_V3                 2>/dev/null || true
+        scripts/config --enable  CONFIG_EXYNOS_SYSCON              2>/dev/null || true
+        scripts/config --enable  CONFIG_EXYNOS_REGULATOR_COUPLER   2>/dev/null || true
         scripts/config --enable  CONFIG_DEBUG_S3C_UART        2>/dev/null || true
         scripts/config --set-val CONFIG_DEBUG_UART_PHYS 0x13800000 2>/dev/null || true
         scripts/config --set-val CONFIG_DEBUG_UART_VIRT 0xf3800000 2>/dev/null || true
         scripts/config --set-val CONFIG_PSTORE_RAM_SIZE 0x800000      2>/dev/null || true
         scripts/config --set-val CONFIG_PSTORE_CONSOLE_SIZE 0x400000 2>/dev/null || true
         scripts/config --enable  CONFIG_PSTORE_CONSOLE_EARLY              2>/dev/null || true
-        scripts/config --set-str CONFIG_CMDLINE "earlycon=exynos4210,0x13800000 console=ttySAC0,115200 ignore_loglevel loglevel=7 debug initcall_debug earlyprintk ramoops.mem_size=0x800000 ramoops.console_size=0x400000 ramoops.dump_oops=1 panic=5 no_console_suspend androidboot.warranty_bit=0 androidboot.bootlock=0 androidboot.veritymode=disabled androidboot.verifiedbootstate=orange androidboot.selinux=permissive enforcing=0 androidboot.secureboot=0 androidboot.force_secureboot=0 dm_verity.dev_wait=0 nokaslr" 2>/dev/null || true
+        scripts/config --set-str CONFIG_CMDLINE "earlycon=exynos4210,mmio32,0x13800000 console=ttySAC0,115200 ignore_loglevel loglevel=7 debug initcall_debug earlyprintk ramoops.mem_size=0x800000 ramoops.console_size=0x400000 ramoops.dump_oops=1 panic=5 no_console_suspend androidboot.warranty_bit=0 androidboot.bootlock=0 androidboot.veritymode=disabled androidboot.verifiedbootstate=orange androidboot.selinux=permissive enforcing=0 androidboot.secureboot=0 androidboot.force_secureboot=0 dm_verity.dev_wait=0 nokaslr" 2>/dev/null || true
         scripts/config --enable  CONFIG_CMDLINE_EXTEND   2>/dev/null || true
         make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=${{ env.CLANG_PATH }}/clang CLANG_TRIPLE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=0 AS=aarch64-linux-gnu-as LD=aarch64-linux-gnu-ld olddefconfig
         # Patch DTS: ensure veritymode=disabled is in device tree bootargs
