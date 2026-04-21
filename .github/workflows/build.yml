@@ -42,15 +42,11 @@ jobs:
         cd kernel
         echo "=== Available defconfigs ==="
         ls arch/arm64/configs/ | grep -i "m12\|exynos\|samsung" | head -10
-        # Use the correct defconfig for SM-M127F
-        DEFCONF=exynos3830-m12nacho_defconfig
-        if [ ! -f arch/arm64/configs/$DEFCONF ]; then
-          DEFCONF=$(ls arch/arm64/configs/ | grep -i "m12nacho" | head -1)
-        fi
-        if [ -z "$DEFCONF" ]; then
-          DEFCONF=$(ls arch/arm64/configs/ | grep -i "exynos3830" | head -1)
-        fi
+        # Pick whatever defconfig exists for M127F
+        DEFCONF=$(ls arch/arm64/configs/ | grep -i "m12" | head -1)
+        [ -z "$DEFCONF" ] && DEFCONF=$(ls arch/arm64/configs/ | grep -i "exynos" | head -1)
         echo "Using defconfig: $DEFCONF"
+        [ -z "$DEFCONF" ] && echo "ERROR: no defconfig found" && exit 1
         make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=${{ env.CLANG_PATH }}/clang $DEFCONF
         scripts/config --enable  CONFIG_MODULES
         scripts/config --enable  CONFIG_MODULE_UNLOAD
