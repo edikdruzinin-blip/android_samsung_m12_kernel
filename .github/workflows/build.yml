@@ -50,15 +50,8 @@ jobs:
           DEFCONF=$(ls arch/arm64/configs/ | grep -i "m12\|exynos3830" | head -1)
           echo "Using local defconfig: $DEFCONF"
         fi
-        # Fix process.c - secdbg_exin_get_unfz() not available in OSS build
-        sed -i 's/panic("fail to freeze tasks: %s", secdbg_exin_get_unfz());/panic("fail to freeze tasks");/' kernel/power/process.c || true
-        # Fix process.c - unused variable warning as error
-        sed -i 's/^\s*enum sys_states sys_state;/\/\/ removed: enum sys_states sys_state;/' kernel/power/process.c || true
-        sed -i '/sys_state = PM_SUSPEND/d' kernel/power/process.c || true
-        sed -i '/sys_state = PM_HIBERNATION/d' kernel/power/process.c || true
-        sed -i '/sys_state = PM_RESTORE/d' kernel/power/process.c || true
-        # Fix fs/super.c - F2FS_SUPER_MAGIC not included
-        sed -i '/#include/a #include <linux/f2fs_fs.h>' fs/super.c || true
+        # Fix build errors
+        echo "CmltcG9ydCByZQoKIyBGaXggMTogcHJvY2Vzcy5jCndpdGggb3Blbigna2VybmVsL3Bvd2VyL3Byb2Nlc3MuYycsICdyJykgYXMgZjoKICAgIHNyYyA9IGYucmVhZCgpCnNyYyA9IHJlLnN1YihyJ1xuXHMqZW51bSBzeXNfc3RhdGVzIHN5c19zdGF0ZTsnLCAnJywgc3JjKQpzcmMgPSByZS5zdWIocidcblxzKnN5c19zdGF0ZSA9IFteO10rOycsICcnLCBzcmMpCnNyYyA9IHNyYy5yZXBsYWNlKCdwYW5pYygiZmFpbCB0byBmcmVlemUgdGFza3M6ICVzIiwgc2VjZGJnX2V4aW5fZ2V0X3VuZnooKSk7JywgJ3BhbmljKCJmYWlsIHRvIGZyZWV6ZSB0YXNrcyIpOycpCndpdGggb3Blbigna2VybmVsL3Bvd2VyL3Byb2Nlc3MuYycsICd3JykgYXMgZjoKICAgIGYud3JpdGUoc3JjKQpwcmludCgicHJvY2Vzcy5jIHBhdGNoZWQiKQoKIyBGaXggMjogZnMvc3VwZXIuYwp3aXRoIG9wZW4oJ2ZzL3N1cGVyLmMnLCAncicpIGFzIGY6CiAgICBzcmMgPSBmLnJlYWQoKQppZiAnRjJGU19TVVBFUl9NQUdJQycgaW4gc3JjIGFuZCAnI2RlZmluZSBGMkZTX1NVUEVSX01BR0lDJyBub3QgaW4gc3JjOgogICAgc3JjID0gc3JjLnJlcGxhY2UoJyNpbmNsdWRlIDxsaW51eC9mcy5oPicsICcjaW5jbHVkZSA8bGludXgvZnMuaD5cbiNpZm5kZWYgRjJGU19TVVBFUl9NQUdJQ1xuI2RlZmluZSBGMkZTX1NVUEVSX01BR0lDXHQweEYyRjUyMDEwXG4jZW5kaWYnKQogICAgd2l0aCBvcGVuKCdmcy9zdXBlci5jJywgJ3cnKSBhcyBmOgogICAgICAgIGYud3JpdGUoc3JjKQogICAgcHJpbnQoImZzL3N1cGVyLmMgcGF0Y2hlZCIpCg==" | base64 -d | python3
         echo "=== Using: $DEFCONF ==="
         echo "IyEvYmluL2Jhc2gKIyBGaXggYnJva2VuIEtjb25maWcgZmlsZXMKZmluZCBkcml2ZXJzIC1uYW1lICJLY29uZmlnIiAtZXhlYyBzZWQgLWkgJzFzL15ceGVmXHhiYlx4YmYvLycge30gXDsgMj4vZGV2L251bGwgfHwgdHJ1ZQojIENsZWFyIGJyb2tlbiBncHUvYXJtL0tjb25maWcKaGVhZCAtNSBkcml2ZXJzL2dwdS9hcm0vS2NvbmZpZwpweXRob24zIC1jICIKaW1wb3J0IHN1YnByb2Nlc3MKciA9IHN1YnByb2Nlc3MucnVuKFsnZ3JlcCcsICctbicsICdzeW50YXhcfGludmFsaWQnLCAnZHJpdmVycy9ncHUvYXJtL0tjb25maWcnXSwgY2FwdHVyZV9vdXRwdXQ9VHJ1ZSwgdGV4dD1UcnVlKQpwcmludChyLnN0ZG91dFs6MjAwXSBpZiByLnN0ZG91dCBlbHNlICdPSycpCiIgMj4vZGV2L251bGwgfHwgdHJ1ZQojIEp1c3QgY2xlYXIgaXQgLSBpdCBjYXVzZXMgZXJyb3JzCmVjaG8gIiMgZW1wdHkiID4gZHJpdmVycy9ncHUvYXJtL0tjb25maWcgfHwgdHJ1ZQojIEZpeCBzZW5zb3JodWIgZW5jb2RpbmcKZm9yIGYgaW4gZHJpdmVycy9zZW5zb3JodWIvZGVidWcvS2NvbmZpZyBkcml2ZXJzL3NlbnNvcmh1Yi9zZW5zb3JodWIvS2NvbmZpZzsgZG8KICBbIC1mICIkZiIgXSAmJiBweXRob24zIC1jICIKaW1wb3J0IHN5cwpkYXRhID0gb3BlbignJGYnLCdyYicpLnJlYWQoKQpjbGVhbiA9IGJ5dGVzKGIgZm9yIGIgaW4gZGF0YSBpZiBiID49IDMyIG9yIGIgaW4gKDksMTAsMTMpKQpvcGVuKCckZicsJ3diJykud3JpdGUoY2xlYW4pCiIgMj4vZGV2L251bGwgfHwgdHJ1ZQpkb25lCmVjaG8gIktjb25maWcgZml4ZXMgYXBwbGllZCIK" | base64 -d | bash
         make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=${{ env.CLANG_PATH }}/clang $DEFCONF
