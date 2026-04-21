@@ -79,8 +79,9 @@ jobs:
         make -j$(nproc) ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- \
           CC=${{ env.CLANG_PATH }}/clang CLANG_TRIPLE=aarch64-linux-gnu- \
           LLVM=1 LLVM_IAS=0 AS=aarch64-linux-gnu-as LD=aarch64-linux-gnu-ld \
-          Image 2>&1 | tail -10
-        strings arch/arm64/boot/Image | grep "Linux version"
+          Image 2>&1 | grep -E "error:|warning:|undefined reference|Image$|vmlinux" | tail -30
+        ls -la arch/arm64/boot/Image || echo "Image NOT created"
+        strings arch/arm64/boot/Image | grep "Linux version" || true
 
     - name: Package kernel
       run: |
