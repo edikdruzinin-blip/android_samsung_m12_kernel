@@ -40,13 +40,17 @@ jobs:
     - name: Configure kernel
       run: |
         cd kernel
-        echo "=== Available defconfigs ==="
-        ls arch/arm64/configs/ | grep -i "m12\|exynos\|samsung" | head -10
-        # Pick whatever defconfig exists for M127F
-        DEFCONF=$(ls arch/arm64/configs/ | grep -i "m12" | head -1)
-        [ -z "$DEFCONF" ] && DEFCONF=$(ls arch/arm64/configs/ | grep -i "exynos" | head -1)
-        echo "Using defconfig: $DEFCONF"
-        [ -z "$DEFCONF" ] && echo "ERROR: no defconfig found" && exit 1
+        # Download working defconfig from theshoqanebi (physwizz source)
+        DEFCONF_URL="https://raw.githubusercontent.com/theshoqanebi/android_samsung_m12_kernel/android-11-m12/arch/arm64/configs/exynos3830-m12nacho_defconfig"
+        wget -q "$DEFCONF_URL" -O arch/arm64/configs/exynos3830-m12nacho_defconfig 2>/dev/null || true
+        if [ -s arch/arm64/configs/exynos3830-m12nacho_defconfig ]; then
+          DEFCONF=exynos3830-m12nacho_defconfig
+          echo "Downloaded defconfig: $DEFCONF"
+        else
+          DEFCONF=$(ls arch/arm64/configs/ | grep -i "m12\|exynos3830" | head -1)
+          echo "Using local defconfig: $DEFCONF"
+        fi
+        echo "=== Using: $DEFCONF ==="
         make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=${{ env.CLANG_PATH }}/clang $DEFCONF
         scripts/config --enable  CONFIG_MODULES
         scripts/config --enable  CONFIG_MODULE_UNLOAD
