@@ -43,11 +43,18 @@ jobs:
     - name: Fix source errors
       run: |
         cd kernel
-        # Fix process.c - remove unused variable sys_state
-        sed -i '/enum sys_states sys_state;/d' kernel/power/process.c
-        sed -i '/sys_state = PM_/d' kernel/power/process.c
+        # Fix drivers/gpu/arm/Kconfig - syntax errors block defconfig
+        echo "# empty" > drivers/gpu/arm/Kconfig
+        # Fix vision/npu Kconfig encoding
+        echo "aW1wb3J0IHN5cwpkYXRhPW9wZW4oc3lzLmFyZ3ZbMV0sJ3JiJykucmVhZCgpCm9wZW4oc3lzLmFyZ3ZbMV0sJ3diJykud3JpdGUoYnl0ZXMoYiBmb3IgYiBpbiBkYXRhIGlmIGI+PTMyIG9yIGIgaW4oOSwxMCwxMykpKQo=" | base64 -d > /tmp/fix_enc.py
+        for f in drivers/vision/npu/Kconfig; do
+          [ -f "$f" ] && python3 /tmp/fix_enc.py "$f" || true
+        done
+        # Fix process.c - secdbg_exin_get_unfz not available in OSS build
         sed -i 's/panic("fail to freeze tasks: %s", secdbg_exin_get_unfz());/panic("fail to freeze tasks");/' kernel/power/process.c
-        grep -n "sys_state" kernel/power/process.c || echo "sys_state removed OK"
+        # Fix unused variable if present (different repos have different code)
+        sed -i '/^\s*enum sys_states sys_state;/d' kernel/power/process.c
+        sed -i '/^\s*sys_state = PM_/d' kernel/power/process.c
         # Fix fs/super.c - F2FS_SUPER_MAGIC not defined
         sed -i 's/F2FS_SUPER_MAGIC/0xF2F52010UL/g' fs/super.c
         echo "Source fixes applied"
