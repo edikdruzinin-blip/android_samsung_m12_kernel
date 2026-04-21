@@ -79,12 +79,14 @@ jobs:
         make -j$(nproc) ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- \
           CC=${{ env.CLANG_PATH }}/clang CLANG_TRIPLE=aarch64-linux-gnu- \
           LLVM=1 LLVM_IAS=0 AS=aarch64-linux-gnu-as LD=aarch64-linux-gnu-ld \
-          Image 2>&1 | grep -E "error:|warning:|undefined reference|Image$|vmlinux" | tail -30
-        ls -la arch/arm64/boot/Image || echo "Image NOT created"
-        strings arch/arm64/boot/Image | grep "Linux version" || true
+          Image 2>&1 | tee /tmp/build.log | grep -E "error:|Error" | head -30 || true
+        echo "=== BUILD ERRORS ===" && grep "error:" /tmp/build.log | grep -v "^#\|objdump\|DWARF" | head -20 || true
+        echo "=== LINKER ERRORS ===" && grep "undefined reference" /tmp/build.log | sort -u | head -20 || true
+        ls -la arch/arm64/boot/Image || echo "Image NOT created - build failed"
 
     - name: Package kernel
       run: |
+        ls -la arch/arm64/boot/Image 2>/dev/null || { echo "No Image - build failed"; exit 1; }
         git clone --depth=1 https://github.com/osm0sis/AnyKernel3 anykernel
         cp kernel/arch/arm64/boot/Image anykernel/
         echo "IyBBbnlLZXJuZWwzIC0gU00tTTEyN0YgS2VybmVsU1UgKHBoeXN3aXp6IGJhc2UpCnByb3BlcnRpZXMoKSB7ICcKa2VybmVsLnN0cmluZz1TTS1NMTI3RiBLZXJuZWxTVQpkby5kZXZpY2VjaGVjaz0wCmRvLm1vZHVsZXM9MApkby5zeXN0ZW1sZXNzPTAKZG8uY2xlYW51cD0xCmRvLmNsZWFudXBvbmFib3J0PTAKZGV2aWNlLm5hbWUxPW0xMgpkZXZpY2UubmFtZTI9bTEybmFjaG8KZGV2aWNlLm5hbWUzPVNNLU0xMjdGCmRldmljZS5uYW1lND1TTS1BMTI3RgpkZXZpY2UubmFtZTU9YTEycwpzdXBwb3J0ZWQudmVyc2lvbnM9MTEKJzsgfQoKYmxvY2s9L2Rldi9ibG9jay9wbGF0Zm9ybS8xMjEwMDAwMC5kd21tYzAvYnktbmFtZS9ib290Owppc19zbG90X2RldmljZT0wOwpyYW1kaXNrX2NvbXByZXNzaW9uPWF1dG87CgouIHRvb2xzL2FrMy1jb3JlLnNoOwoKZHVtcF9ib290Owp3cml0ZV9ib290Owo=" | base64 -d > anykernel/anykernel.sh
