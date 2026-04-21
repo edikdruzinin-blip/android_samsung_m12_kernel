@@ -25,38 +25,39 @@ jobs:
         echo "CLANG_PATH=$CLANG_BIN" >> $GITHUB_ENV
         $CLANG_BIN/clang --version
 
-    - name: Clone SpacingBat3 kernel (physwizz source)
+    - name: Clone physwizz kernel source
       run: |
-        # Try multiple sources for exynos850 kernel
-        git clone --depth=1           https://github.com/theshoqanebi/android_samsung_m12_kernel.git           --branch android-11-m12 kernel 2>/dev/null ||         git clone --depth=1           https://github.com/edikdruzinin-blip/android_samsung_m12_kernel.git           --branch main kernel 2>/dev/null ||         git clone --depth=1           https://github.com/exynos850-dev/android_kernel_samsung_exynos850.git           kernel 2>/dev/null || true
-        echo "Kernel source:"
-        ls kernel/arch/arm64/configs/ | grep -i "m12\|exynos850" 2>/dev/null || echo "No configs found"
+        git clone --depth=1 \
+          https://github.com/physwizz/a127f-R-u1.git \
+          kernel
+        echo "=== Available defconfigs ==="
+        ls kernel/arch/arm64/configs/ | grep -i "a12\|m12\|exynos"
+        head -5 kernel/Makefile
 
     - name: Apply KernelSU
       run: |
         cd kernel
         curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s main
+        echo "KernelSU done"
+
+    - name: Fix source errors
+      run: |
+        cd kernel
+        # Fix process.c - remove unused variable sys_state
+        sed -i '/enum sys_states sys_state;/d' kernel/power/process.c
+        sed -i '/sys_state = PM_/d' kernel/power/process.c
+        sed -i 's/panic("fail to freeze tasks: %s", secdbg_exin_get_unfz());/panic("fail to freeze tasks");/' kernel/power/process.c
+        grep -n "sys_state" kernel/power/process.c || echo "sys_state removed OK"
+        # Fix fs/super.c - F2FS_SUPER_MAGIC not defined
+        sed -i 's/F2FS_SUPER_MAGIC/0xF2F52010UL/g' fs/super.c
+        echo "Source fixes applied"
 
     - name: Configure kernel
       run: |
         cd kernel
-        # Download working defconfig from theshoqanebi (physwizz source)
-        DEFCONF_URL="https://raw.githubusercontent.com/theshoqanebi/android_samsung_m12_kernel/android-11-m12/arch/arm64/configs/exynos3830-m12nacho_defconfig"
-        wget -q "$DEFCONF_URL" -O arch/arm64/configs/exynos3830-m12nacho_defconfig 2>/dev/null || true
-        if [ -s arch/arm64/configs/exynos3830-m12nacho_defconfig ]; then
-          DEFCONF=exynos3830-m12nacho_defconfig
-          echo "Downloaded defconfig: $DEFCONF"
-        else
-          DEFCONF=$(ls arch/arm64/configs/ | grep -i "m12\|exynos3830" | head -1)
-          echo "Using local defconfig: $DEFCONF"
-        fi
-        # Fix build errors (simple sed - reliable)
-        sed -i '/enum sys_states sys_state;/d' kernel/power/process.c
-        sed -i 's/panic("fail to freeze tasks: %s", secdbg_exin_get_unfz());/panic("fail to freeze tasks");/' kernel/power/process.c
-        sed -i 's/if (sb->s_magic == F2FS_SUPER_MAGIC)/if (sb->s_magic == 0xF2F52010UL)/g' fs/super.c
-        echo "Build fixes applied"
-        echo "=== Using: $DEFCONF ==="
-        echo "IyEvYmluL2Jhc2gKIyBGaXggYnJva2VuIEtjb25maWcgZmlsZXMKZmluZCBkcml2ZXJzIC1uYW1lICJLY29uZmlnIiAtZXhlYyBzZWQgLWkgJzFzL15ceGVmXHhiYlx4YmYvLycge30gXDsgMj4vZGV2L251bGwgfHwgdHJ1ZQojIENsZWFyIGJyb2tlbiBncHUvYXJtL0tjb25maWcKaGVhZCAtNSBkcml2ZXJzL2dwdS9hcm0vS2NvbmZpZwpweXRob24zIC1jICIKaW1wb3J0IHN1YnByb2Nlc3MKciA9IHN1YnByb2Nlc3MucnVuKFsnZ3JlcCcsICctbicsICdzeW50YXhcfGludmFsaWQnLCAnZHJpdmVycy9ncHUvYXJtL0tjb25maWcnXSwgY2FwdHVyZV9vdXRwdXQ9VHJ1ZSwgdGV4dD1UcnVlKQpwcmludChyLnN0ZG91dFs6MjAwXSBpZiByLnN0ZG91dCBlbHNlICdPSycpCiIgMj4vZGV2L251bGwgfHwgdHJ1ZQojIEp1c3QgY2xlYXIgaXQgLSBpdCBjYXVzZXMgZXJyb3JzCmVjaG8gIiMgZW1wdHkiID4gZHJpdmVycy9ncHUvYXJtL0tjb25maWcgfHwgdHJ1ZQojIEZpeCBzZW5zb3JodWIgZW5jb2RpbmcKZm9yIGYgaW4gZHJpdmVycy9zZW5zb3JodWIvZGVidWcvS2NvbmZpZyBkcml2ZXJzL3NlbnNvcmh1Yi9zZW5zb3JodWIvS2NvbmZpZzsgZG8KICBbIC1mICIkZiIgXSAmJiBweXRob24zIC1jICIKaW1wb3J0IHN5cwpkYXRhID0gb3BlbignJGYnLCdyYicpLnJlYWQoKQpjbGVhbiA9IGJ5dGVzKGIgZm9yIGIgaW4gZGF0YSBpZiBiID49IDMyIG9yIGIgaW4gKDksMTAsMTMpKQpvcGVuKCckZicsJ3diJykud3JpdGUoY2xlYW4pCiIgMj4vZGV2L251bGwgfHwgdHJ1ZQpkb25lCmVjaG8gIktjb25maWcgZml4ZXMgYXBwbGllZCIK" | base64 -d | bash
+        DEFCONF=$(ls arch/arm64/configs/ | grep -i "a12\|m12nacho\|exynos3830" | head -1)
+        [ -z "$DEFCONF" ] && DEFCONF=$(ls arch/arm64/configs/ | grep -i "exynos" | head -1)
+        echo "Using defconfig: $DEFCONF"
         make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=${{ env.CLANG_PATH }}/clang $DEFCONF
         scripts/config --enable  CONFIG_MODULES
         scripts/config --enable  CONFIG_MODULE_UNLOAD
@@ -75,17 +76,10 @@ jobs:
         scripts/config --disable CONFIG_RANDOMIZE_BASE
         scripts/config --set-str CONFIG_CMDLINE "androidboot.warranty_bit=0 androidboot.bootlock=0 androidboot.selinux=permissive enforcing=0 androidboot.veritymode=disabled androidboot.secureboot=0 androidboot.force_secureboot=0 nokaslr"
         scripts/config --enable CONFIG_CMDLINE_EXTEND
-        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=${{ env.CLANG_PATH }}/clang CLANG_TRIPLE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=0 AS=aarch64-linux-gnu-as LD=aarch64-linux-gnu-ld olddefconfig
+        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=${{ env.CLANG_PATH }}/clang \
+          CLANG_TRIPLE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=0 \
+          AS=aarch64-linux-gnu-as LD=aarch64-linux-gnu-ld olddefconfig
         grep "CONFIG_KSU\|CONFIG_KPROBES\b\|CONFIG_MODULES\b" .config
-
-    - name: Fix build errors
-      run: |
-        cd kernel
-        sed -i '/enum sys_states sys_state;/d' kernel/power/process.c
-        sed -i 's/panic("fail to freeze tasks: %s", secdbg_exin_get_unfz());/panic("fail to freeze tasks");/' kernel/power/process.c
-        sed -i 's/if (sb->s_magic == F2FS_SUPER_MAGIC)/if (sb->s_magic == 0xF2F52010UL)/g' fs/super.c
-        echo "Build fixes applied"
-        grep -n "sys_state" kernel/power/process.c | head -5
 
     - name: Build kernel
       run: |
@@ -93,14 +87,14 @@ jobs:
         make -j$(nproc) ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- \
           CC=${{ env.CLANG_PATH }}/clang CLANG_TRIPLE=aarch64-linux-gnu- \
           LLVM=1 LLVM_IAS=0 AS=aarch64-linux-gnu-as LD=aarch64-linux-gnu-ld \
-          Image 2>&1 | tee /tmp/build.log | grep -E "error:|Error" | head -30 || true
+          Image 2>&1 | tee /tmp/build.log | grep -E "^.*error:" | head -20 || true
         echo "=== BUILD ERRORS ===" && grep "error:" /tmp/build.log | grep -v "^#\|objdump\|DWARF" | head -20 || true
-        echo "=== LINKER ERRORS ===" && grep "undefined reference" /tmp/build.log | sort -u | head -20 || true
-        ls -la arch/arm64/boot/Image || echo "Image NOT created - build failed"
+        ls -la arch/arm64/boot/Image || { echo "Image NOT created"; cat /tmp/build.log | tail -30; exit 1; }
+        strings arch/arm64/boot/Image | grep "Linux version"
 
     - name: Package kernel
       run: |
-        ls -la arch/arm64/boot/Image 2>/dev/null || { echo "No Image - build failed"; exit 1; }
+        ls -la kernel/arch/arm64/boot/Image
         git clone --depth=1 https://github.com/osm0sis/AnyKernel3 anykernel
         cp kernel/arch/arm64/boot/Image anykernel/
         echo "IyBBbnlLZXJuZWwzIC0gU00tTTEyN0YgS2VybmVsU1UgKHBoeXN3aXp6IGJhc2UpCnByb3BlcnRpZXMoKSB7ICcKa2VybmVsLnN0cmluZz1TTS1NMTI3RiBLZXJuZWxTVQpkby5kZXZpY2VjaGVjaz0wCmRvLm1vZHVsZXM9MApkby5zeXN0ZW1sZXNzPTAKZG8uY2xlYW51cD0xCmRvLmNsZWFudXBvbmFib3J0PTAKZGV2aWNlLm5hbWUxPW0xMgpkZXZpY2UubmFtZTI9bTEybmFjaG8KZGV2aWNlLm5hbWUzPVNNLU0xMjdGCmRldmljZS5uYW1lND1TTS1BMTI3RgpkZXZpY2UubmFtZTU9YTEycwpzdXBwb3J0ZWQudmVyc2lvbnM9MTEKJzsgfQoKYmxvY2s9L2Rldi9ibG9jay9wbGF0Zm9ybS8xMjEwMDAwMC5kd21tYzAvYnktbmFtZS9ib290Owppc19zbG90X2RldmljZT0wOwpyYW1kaXNrX2NvbXByZXNzaW9uPWF1dG87CgouIHRvb2xzL2FrMy1jb3JlLnNoOwoKZHVtcF9ib290Owp3cml0ZV9ib290Owo=" | base64 -d > anykernel/anykernel.sh
