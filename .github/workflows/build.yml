@@ -103,7 +103,7 @@ jobs:
           LLVM=1 LLVM_IAS=0 AS=aarch64-linux-gnu-as LD=aarch64-linux-gnu-ld \
           Image 2>&1 | tee /tmp/build.log | grep -E "^.*error:" | head -20 || true
         echo "=== BUILD ERRORS ===" && grep "error:" /tmp/build.log | grep -v "^#\|objdump\|DWARF" | head -20 || true
-        ls -la arch/arm64/boot/Image || { echo "Image NOT created"; cat /tmp/build.log | tail -30; exit 1; }
+        ls -la arch/arm64/boot/Image || { echo "Image NOT created"; grep -E "error:|Error|undefined ref" /tmp/build.log | head -30; echo "--- LAST 20 LINES ---"; tail -20 /tmp/build.log; exit 1; }
         strings arch/arm64/boot/Image | grep "Linux version"
 
     - name: Package kernel
