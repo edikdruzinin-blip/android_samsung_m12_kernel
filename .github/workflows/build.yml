@@ -98,6 +98,15 @@ jobs:
         cd kernel
         # Fix extract-cert.c and dtc issues
         echo "CiMgRml4IGV4dHJhY3QtY2VydC5jIC0gcmVwbGFjZSB3aXRoIG1pbmltYWwgdmVyc2lvbiB0aGF0IGRvZXNuJ3QgdXNlIEVOR0lORQpjYXQgPiBzY3JpcHRzL2V4dHJhY3QtY2VydC5jIDw8ICdDRVJURU9GJwovKiBNaW5pbWFsIGV4dHJhY3QtY2VydCAtIEVOR0lORSBBUEkgcmVtb3ZlZCBmb3IgT3BlblNTTCAzLjAgY29tcGF0aWJpbGl0eSAqLwojaW5jbHVkZSA8c3RkaW8uaD4KI2luY2x1ZGUgPHN0ZGxpYi5oPgojaW5jbHVkZSA8c3RyaW5nLmg+CiNpbmNsdWRlIDxvcGVuc3NsL2Jpby5oPgojaW5jbHVkZSA8b3BlbnNzbC9wZW0uaD4KI2luY2x1ZGUgPG9wZW5zc2wveDUwOS5oPgojaW5jbHVkZSA8b3BlbnNzbC9lcnIuaD4KCiNkZWZpbmUgRVJSKGNvbmQsIC4uLikgZG8geyBpZiAoY29uZCkgeyBmcHJpbnRmKHN0ZGVyciwgX19WQV9BUkdTX18pOyBleGl0KDEpOyB9IH0gd2hpbGUoMCkKCnN0YXRpYyB2b2lkIHdyaXRlX2NlcnQoWDUwOSAqeDUwOSwgRklMRSAqZikgewogICAgdWludDhfdCAqYnVmID0gTlVMTDsKICAgIGludCBsZW4gPSBpMmRfWDUwOSh4NTA5LCAmYnVmKTsKICAgIGlmIChsZW4gPCAwKSB7IGZwcmludGYoc3RkZXJyLCAiRmFpbGVkIHRvIGVuY29kZSBjZXJ0XG4iKTsgZXhpdCgxKTsgfQogICAgZndyaXRlKGJ1ZiwgMSwgbGVuLCBmKTsKICAgIGZyZWUoYnVmKTsKfQoKaW50IG1haW4oaW50IGFyZ2MsIGNoYXIgKiphcmd2KSB7CiAgICBpZiAoYXJnYyA8IDMpIHsgZnByaW50ZihzdGRlcnIsICJVc2FnZTogJXMgY2VydC5wZW0gY2VydHMub1xuIiwgYXJndlswXSk7IGV4aXQoMSk7IH0KICAgIEZJTEUgKm91dCA9IGZvcGVuKGFyZ3ZbMl0sICJ3Iik7CiAgICBpZiAoIW91dCkgeyBwZXJyb3IoYXJndlsyXSk7IGV4aXQoMSk7IH0KICAgIEZJTEUgKmluID0gZm9wZW4oYXJndlsxXSwgInIiKTsKICAgIGlmICghaW4pIHsgcGVycm9yKGFyZ3ZbMV0pOyBleGl0KDEpOyB9CiAgICBYNTA5ICp4NTA5OwogICAgd2hpbGUgKCh4NTA5ID0gUEVNX3JlYWRfWDUwOShpbiwgTlVMTCwgTlVMTCwgTlVMTCkpICE9IE5VTEwpIHsKICAgICAgICB3cml0ZV9jZXJ0KHg1MDksIG91dCk7CiAgICAgICAgWDUwOV9mcmVlKHg1MDkpOwogICAgfQogICAgZmNsb3NlKGluKTsKICAgIGZjbG9zZShvdXQpOwogICAgcmV0dXJuIDA7Cn0KQ0VSVEVPRgplY2hvICJleHRyYWN0LWNlcnQuYyByZXBsYWNlZCIKCiMgRml4IGR0YyB5eWxsb2MgbXVsdGlwbGUgZGVmaW5pdGlvbiAoR0NDIDEwKyBpc3N1ZSkKaWYgWyAtZiBzY3JpcHRzL2R0Yy9kdGMtbGV4ZXIubCBdOyB0aGVuCiAgICBzZWQgLWkgJy9ZWUxUWVBFIHl5bGxvYy9kJyBzY3JpcHRzL2R0Yy9kdGMtbGV4ZXIubAogICAgZWNobyAiZHRjLWxleGVyLmwgZml4ZWQiCmZpCmlmIFsgLWYgc2NyaXB0cy9kdGMvZHRjLWxleGVyLmxleC5jIF07IHRoZW4KICAgIHNlZCAtaSAncy9ZWUxUWVBFIHl5bGxvYy9leHRlcm4gWVlMVFlQRSB5eWxsb2MvJyBzY3JpcHRzL2R0Yy9kdGMtbGV4ZXIubGV4LmMgMj4vZGV2L251bGwgfHwgdHJ1ZQogICAgZWNobyAiZHRjLWxleGVyLmxleC5jIGZpeGVkIgpmaQo=" | base64 -d | bash
+        # Fix certs/Makefile - x509_certificate_list build fails when no keys present
+        mkdir -p certs
+        touch certs/x509_certificate_list
+        # Patch certs/Makefile to not rebuild x509_certificate_list from trusted keys
+        if [ -f certs/Makefile ]; then
+          sed -i 's|$(obj)/x509_certificate_list|/dev/null|g' certs/Makefile || true
+          sed -i 's|$(call if_changed,extract-cert)|true|g' certs/Makefile || true
+        fi
+        echo "Certs fixed"
         make -j$(nproc) ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- \
           CC=${{ env.CLANG_PATH }}/clang CLANG_TRIPLE=aarch64-linux-gnu- \
           LLVM=1 LLVM_IAS=0 AS=aarch64-linux-gnu-as LD=aarch64-linux-gnu-ld \
