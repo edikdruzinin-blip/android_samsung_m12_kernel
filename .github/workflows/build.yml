@@ -42,7 +42,7 @@ jobs:
     - name: Apply KernelSU
       run: |
         cd kernel
-        curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s main
+        curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s v0.9.5
         echo "KernelSU done"
 
     - name: Fix source errors
@@ -109,7 +109,7 @@ jobs:
         make -j$(nproc) ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- \
           CC=${{ env.CLANG_PATH }}/clang CLANG_TRIPLE=aarch64-linux-gnu- \
           LLVM=1 LLVM_IAS=0 AS=aarch64-linux-gnu-as LD=aarch64-linux-gnu-ld \
-          Image modules 2>&1 | tee /tmp/build.log | grep -E "^.*error:" | head -20 || true
+          KCFLAGS="-Wno-error=implicit-int -Wno-error=implicit-function-declaration" Image modules 2>&1 | tee /tmp/build.log | grep -E "^.*error:" | head -20 || true
         echo "=== BUILD ERRORS ===" && grep "error:" /tmp/build.log | grep -v "^#\|objdump\|DWARF" | head -20 || true
         ls -la arch/arm64/boot/Image || { echo "Image NOT created"; grep -E "error:|Error|undefined ref" /tmp/build.log | head -30; echo "--- LAST 20 LINES ---"; tail -20 /tmp/build.log; exit 1; }
         strings arch/arm64/boot/Image | grep "Linux version"
