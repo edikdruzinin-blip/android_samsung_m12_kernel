@@ -99,6 +99,10 @@ jobs:
         scripts/config --disable CONFIG_SYSTEM_TRUSTED_KEYRING        2>/dev/null || true
         scripts/config --disable CONFIG_PKCS7_MESSAGE_PARSER          2>/dev/null || true
         scripts/config --disable CONFIG_SYSTEM_DATA_VERIFICATION      2>/dev/null || true
+        scripts/config --disable CONFIG_ASYMMETRIC_KEY_TYPE           2>/dev/null || true
+        scripts/config --disable CONFIG_ASYMMETRIC_PUBLIC_KEY_SUBTYPE 2>/dev/null || true
+        scripts/config --disable CONFIG_X509_CERTIFICATE_PARSER       2>/dev/null || true
+        scripts/config --disable CONFIG_SYSTEM_REVOCATION_LIST        2>/dev/null || true
         make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=${{ env.CLANG_PATH }}/clang \
           CLANG_TRIPLE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=0 \
           AS=aarch64-linux-gnu-as LD=aarch64-linux-gnu-ld olddefconfig
