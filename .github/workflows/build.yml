@@ -1,8 +1,8 @@
 name: Build SM-M127F KernelSU (physwizz base)
- 
+
 on:
   workflow_dispatch:
- 
+
 jobs:
   build:
     runs-on: ubuntu-22.04
@@ -14,7 +14,7 @@ jobs:
           git make bc bison flex libssl-dev libelf-dev \
           gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu \
           python3 zip unzip ccache
- 
+
     - name: Download Android Clang r353983c
       run: |
         mkdir -p $HOME/toolchains
@@ -29,7 +29,7 @@ jobs:
           echo "CLANG_PATH=$CLANG_PATH" >> $GITHUB_ENV
           $CLANG_PATH/clang --version
         }
- 
+
     - name: Clone physwizz kernel source
       run: |
         git clone --depth=1 \
@@ -38,13 +38,13 @@ jobs:
         echo "=== Available defconfigs ==="
         ls kernel/arch/arm64/configs/ | grep -i "a12\|m12\|exynos"
         head -5 kernel/Makefile
- 
+
     - name: Apply KernelSU
       run: |
         cd kernel
         curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s v0.9.5
         echo "KernelSU done"
- 
+
     - name: Fix source errors
       run: |
         cd kernel
@@ -62,7 +62,7 @@ jobs:
         # Fix fs/super.c - F2FS_SUPER_MAGIC not defined
         sed -i 's/F2FS_SUPER_MAGIC/0xF2F52010UL/g' fs/super.c
         echo "Source fixes applied"
- 
+
     - name: Configure kernel
       run: |
         cd kernel
@@ -97,7 +97,7 @@ jobs:
         make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=${{ env.CLANG_PATH }}/clang \
           CLANG_TRIPLE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=0 \
           AS=aarch64-linux-gnu-as LD=aarch64-linux-gnu-ld olddefconfig
- 
+
         # Disable asymmetric keys AFTER olddefconfig (they get re-enabled by dependencies)
         scripts/config --disable CONFIG_KEYS                          2>/dev/null || true
         scripts/config --disable CONFIG_TRUSTED_KEYS                  2>/dev/null || true
@@ -114,14 +114,14 @@ jobs:
         scripts/config --disable CONFIG_SPU_VERIFY                    2>/dev/null || true
         scripts/config --disable CONFIG_SAMSUNG_SPU                   2>/dev/null || true
         scripts/config --disable CONFIG_SPU_VERIFY_SUPPORT            2>/dev/null || true
- 
- 
+
+
         grep "CONFIG_KSU\|CONFIG_KPROBES\b\|CONFIG_MODULES\b" .config
- 
+
     - name: Stub missing symbols
       run: |
         cd kernel
-        echo "CmltcG9ydCByZSwgb3MKCiMgT3ZlcnJpZGUgYXN5bW1ldHJpY19rZXlzIE1ha2VmaWxlIHRvIHNraXAgY29tcGlsYXRpb24gZW50aXJlbHkKd2l0aCBvcGVuKCdjcnlwdG8vYXN5bW1ldHJpY19rZXlzL01ha2VmaWxlJywgJ3cnKSBhcyBmOgogICAgZi53cml0ZSgnb2JqLXkgOj1cbicpCnByaW50KCdjcnlwdG8vYXN5bW1ldHJpY19rZXlzL01ha2VmaWxlOiBvdmVycmlkZGVuIChza2lwIGNvbXBpbGF0aW9uKScpCgpkZWYgc3R1Yl9zaWduYXR1cmVfY2FsbHMoZmlsZXBhdGgsIHN5bWJvbCk6CiAgICBpZiBub3Qgb3MucGF0aC5leGlzdHMoZmlsZXBhdGgpOgogICAgICAgIHJldHVybgogICAgbGluZXMgPSBvcGVuKGZpbGVwYXRoKS5yZWFkbGluZXMoKQogICAgbmV3X2xpbmVzID0gW10KICAgIGkgPSAwCiAgICB3aGlsZSBpIDwgbGVuKGxpbmVzKToKICAgICAgICBsaW5lID0gbGluZXNbaV0KICAgICAgICBpZiBzeW1ib2wgaW4gbGluZToKICAgICAgICAgICAgc3RtdCA9IGxpbmUKICAgICAgICAgICAgd2hpbGUgJzsnIG5vdCBpbiBzdG10IGFuZCBpKzEgPCBsZW4obGluZXMpOgogICAgICAgICAgICAgICAgaSArPSAxCiAgICAgICAgICAgICAgICBzdG10ICs9IGxpbmVzW2ldCiAgICAgICAgICAgIG5ld19saW5lcy5hcHBlbmQoJ1x0cmV0dXJuIDA7IC8qIHN0dWJiZWQgKi9cbicpCiAgICAgICAgICAgIHByaW50KGYne2ZpbGVwYXRofTogc3R1YmJlZCBsaW5lIHtpfScpCiAgICAgICAgZWxzZToKICAgICAgICAgICAgbmV3X2xpbmVzLmFwcGVuZChsaW5lKQogICAgICAgIGkgKz0gMQogICAgb3BlbihmaWxlcGF0aCwgJ3cnKS53cml0ZWxpbmVzKG5ld19saW5lcykKCnN0dWJfc2lnbmF0dXJlX2NhbGxzKCduZXQvd2lyZWxlc3MvcmVnLmMnLCAndmVyaWZ5X3BrY3M3X3NpZ25hdHVyZScpCnN0dWJfc2lnbmF0dXJlX2NhbGxzKCdmcy92ZXJpdHkvc2lnbmF0dXJlLmMnLCAndmVyaWZ5X3BrY3M3X3NpZ25hdHVyZScpCnN0dWJfc2lnbmF0dXJlX2NhbGxzKCdkcml2ZXJzL3NwdV92ZXJpZnkvc3B1LXNpZ24tdmVyaWZ5LmMnLCAncHVibGljX2tleV92ZXJpZnlfc2lnbmF0dXJlJykKIyBBbHNvIG92ZXJyaWRlIHNwdV92ZXJpZnkgTWFrZWZpbGUgaWYgZGlzYWJsZSBkaWRuJ3Qgd29yawpzcHVfbWsgPSAnZHJpdmVycy9zcHVfdmVyaWZ5L01ha2VmaWxlJwppZiBvcy5wYXRoLmV4aXN0cyhzcHVfbWspOgogICAgd2l0aCBvcGVuKHNwdV9taywgJ3cnKSBhcyBmOgogICAgICAgIGYud3JpdGUoJ29iai15IDo9XG4nKQogICAgcHJpbnQoJ2RyaXZlcnMvc3B1X3ZlcmlmeS9NYWtlZmlsZTogb3ZlcnJpZGRlbicpCg==" | base64 -d | python3
+        echo "CmltcG9ydCByZSwgb3MKCndpdGggb3BlbignY3J5cHRvL2FzeW1tZXRyaWNfa2V5cy9NYWtlZmlsZScsICd3JykgYXMgZjoKICAgIGYud3JpdGUoJ29iai15IDo9XG4nKQpwcmludCgnY3J5cHRvL2FzeW1tZXRyaWNfa2V5cy9NYWtlZmlsZTogb3ZlcnJpZGRlbicpCgpkZWYgc3R1Yl9jYWxscyhmaWxlcGF0aCwgc3ltYm9sKToKICAgIGlmIG5vdCBvcy5wYXRoLmV4aXN0cyhmaWxlcGF0aCk6CiAgICAgICAgcmV0dXJuCiAgICBsaW5lcyA9IG9wZW4oZmlsZXBhdGgpLnJlYWRsaW5lcygpCiAgICBuZXdfbGluZXMgPSBbXQogICAgaSA9IDAKICAgIHdoaWxlIGkgPCBsZW4obGluZXMpOgogICAgICAgIGxpbmUgPSBsaW5lc1tpXQogICAgICAgIGlmIHN5bWJvbCBpbiBsaW5lOgogICAgICAgICAgICBzdG10ID0gbGluZQogICAgICAgICAgICB3aGlsZSAnOycgbm90IGluIHN0bXQgYW5kIGkrMSA8IGxlbihsaW5lcyk6CiAgICAgICAgICAgICAgICBpICs9IDEKICAgICAgICAgICAgICAgIHN0bXQgKz0gbGluZXNbaV0KICAgICAgICAgICAgbmV3X2xpbmVzLmFwcGVuZCgnXHRyZXR1cm4gMDsgLyogc3R1YmJlZCAqL1xuJykKICAgICAgICAgICAgcHJpbnQoZid7ZmlsZXBhdGh9OiBzdHViYmVkIGxpbmUge2l9JykKICAgICAgICBlbHNlOgogICAgICAgICAgICBuZXdfbGluZXMuYXBwZW5kKGxpbmUpCiAgICAgICAgaSArPSAxCiAgICBvcGVuKGZpbGVwYXRoLCAndycpLndyaXRlbGluZXMobmV3X2xpbmVzKQoKc3R1Yl9jYWxscygnbmV0L3dpcmVsZXNzL3JlZy5jJywgJ3ZlcmlmeV9wa2NzN19zaWduYXR1cmUnKQpzdHViX2NhbGxzKCdmcy92ZXJpdHkvc2lnbmF0dXJlLmMnLCAndmVyaWZ5X3BrY3M3X3NpZ25hdHVyZScpCnN0dWJfY2FsbHMoJ2RyaXZlcnMvc3B1X3ZlcmlmeS9zcHUtc2lnbi12ZXJpZnkuYycsICdwdWJsaWNfa2V5X3ZlcmlmeV9zaWduYXR1cmUnKQpzdHViX2NhbGxzKCdkcml2ZXJzL2lucHV0L3RvdWNoc2NyZWVuL2lsaTk4ODF4L2lsaTk4ODF4X2hvc3RkbC5jJywgJ3NwdV9maXJtd2FyZV9zaWduYXR1cmVfdmVyaWZ5JykKCmZvciBtayBpbiBbJ2RyaXZlcnMvc3B1X3ZlcmlmeS9NYWtlZmlsZSddOgogICAgaWYgb3MucGF0aC5leGlzdHMobWspOgogICAgICAgIG9wZW4obWssICd3Jykud3JpdGUoJ29iai15IDo9XG4nKQogICAgICAgIHByaW50KGYne21rfTogb3ZlcnJpZGRlbicpCg==" | base64 -d | python3
     - name: Build kernel
       run: |
         cd kernel
@@ -136,7 +136,7 @@ jobs:
         echo "=== BUILD ERRORS ===" && grep "error:" /tmp/build.log | grep -v "^#\|objdump\|DWARF" | head -20 || true
         ls -la arch/arm64/boot/Image || { echo "Image NOT created"; grep -E "error:|Error|undefined ref" /tmp/build.log | head -30; echo "--- LAST 20 LINES ---"; tail -20 /tmp/build.log; exit 1; }
         strings arch/arm64/boot/Image | grep "Linux version"
- 
+
     - name: Package kernel
       run: |
         ls -la kernel/arch/arm64/boot/Image
@@ -145,10 +145,9 @@ jobs:
         echo "IyBBbnlLZXJuZWwzIC0gU00tTTEyN0YgS2VybmVsU1UgKHBoeXN3aXp6IGJhc2UpCnByb3BlcnRpZXMoKSB7ICcKa2VybmVsLnN0cmluZz1TTS1NMTI3RiBLZXJuZWxTVQpkby5kZXZpY2VjaGVjaz0wCmRvLm1vZHVsZXM9MApkby5zeXN0ZW1sZXNzPTAKZG8uY2xlYW51cD0xCmRvLmNsZWFudXBvbmFib3J0PTAKZGV2aWNlLm5hbWUxPW0xMgpkZXZpY2UubmFtZTI9bTEybmFjaG8KZGV2aWNlLm5hbWUzPVNNLU0xMjdGCmRldmljZS5uYW1lND1TTS1BMTI3RgpkZXZpY2UubmFtZTU9YTEycwpzdXBwb3J0ZWQudmVyc2lvbnM9MTEKJzsgfQoKYmxvY2s9L2Rldi9ibG9jay9wbGF0Zm9ybS8xMjEwMDAwMC5kd21tYzAvYnktbmFtZS9ib290Owppc19zbG90X2RldmljZT0wOwpyYW1kaXNrX2NvbXByZXNzaW9uPWF1dG87CgouIHRvb2xzL2FrMy1jb3JlLnNoOwoKZHVtcF9ib290Owp3cml0ZV9ib290Owo=" | base64 -d > anykernel/anykernel.sh
         cd anykernel && zip -r9 ../SM-M127F_KernelSU.zip * -x "*.zip"
         ls -la ../SM-M127F_KernelSU.zip
- 
+
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: SM-M127F_KernelSU
         path: SM-M127F_KernelSU.zip
-        
